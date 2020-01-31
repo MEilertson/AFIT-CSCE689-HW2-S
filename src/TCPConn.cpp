@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <iostream>
 #include "TCPConn.h"
+#include "PasswdMgr.h"
 #include "strfuncts.h"
 
 // The filename/path of the password file
@@ -89,13 +90,16 @@ void TCPConn::handleConnection() {
             break;
    
          case s_changepwd:
-         case s_confirmpwd:
             changePassword();
             break;
+         case s_confirmpwd:
 
          case s_menu:
+            //sendMenu();
             getMenuChoice();
-
+            break;
+         case s_reject:
+            disconnect();
             break;
 
          default:
@@ -119,7 +123,22 @@ void TCPConn::handleConnection() {
  **********************************************************************************************/
 
 void TCPConn::getUsername() {
-   // Insert your mind-blowing code here
+   if (!_connfd.hasData())
+      return;
+
+   std::string username;
+   if (!getUserInput(username))
+      return;
+   
+   if(pwm.checkUser(username.c_str())){
+      _username = username;
+      _status = s_passwd;
+      _connfd.writeFD("Password: ");
+   } else {
+      _connfd.writeFD("Invalid User - Disconnect\n");
+      disconnect();
+   }
+
 }
 
 /**********************************************************************************************
@@ -132,6 +151,25 @@ void TCPConn::getUsername() {
 
 void TCPConn::getPasswd() {
    // Insert your astounding code here
+   if (!_connfd.hasData())
+      return;
+   std::string password;
+
+   int i = 0;
+   while (i < max_attempts)  
+   {
+      if (!getUserInput(password))
+         return;
+      if (pwm.checkPasswd(_username.c_str(), password.c_str()))
+      {
+         _status = s_menu;
+         sendMenu();
+         return;
+      }
+      std::cout << password << "\n";
+      i++;
+   }
+   _status = s_reject;
 }
 
 /**********************************************************************************************

@@ -7,6 +7,7 @@
  ****************************************************************************************/  
 
 #include <stdexcept>
+#include <stdlib.h>
 #include <iostream>
 #include "PasswdMgr.h"
 #include "FileDesc.h"
@@ -25,6 +26,7 @@ void displayHelp(const char *execname) {
 
 
 int main(int argc, char *argv[]) {
+   srand(time(NULL));
 
    // Check the command line input
    if (argc < 2) {

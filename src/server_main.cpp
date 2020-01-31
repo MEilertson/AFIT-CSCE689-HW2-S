@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
    }
 
    // Try to set up the server for listening
-   TCPServer server;
+   TCPServer server("server.log");
    try {
       cout << "Binding server to " << ip_addr << " port " << port << endl;
       server.bindSvr(ip_addr.c_str(), port);

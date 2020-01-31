@@ -2,6 +2,7 @@
 #define TCPCONN_H
 
 #include "FileDesc.h"
+#include "PasswdMgr.h"
 
 const int max_attempts = 2;
 
@@ -39,11 +40,13 @@ public:
 private:
 
 
-   enum statustype { s_username, s_changepwd, s_confirmpwd, s_passwd, s_menu };
+   enum statustype { s_username, s_changepwd, s_confirmpwd, s_passwd, s_menu, s_reject};
 
    statustype _status = s_username;
 
    SocketFD _connfd;
+
+   PasswdMgr pwm = PasswdMgr("passwd");
  
    std::string _username; // The username this connection is associated with
 

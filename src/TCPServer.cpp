@@ -9,10 +9,13 @@
 #include <vector>
 #include <iostream>
 #include <memory>
+#include <random>
 #include <sstream>
+#include <algorithm>
 #include "TCPServer.h"
 
-TCPServer::TCPServer(){ // :_server_log("server.log", 0) {
+TCPServer::TCPServer(const char* log_file) :_server_log(log_file) {
+
 }
 
 
@@ -28,6 +31,7 @@ TCPServer::~TCPServer() {
  **********************************************************************************************/
 
 void TCPServer::bindSvr(const char *ip_addr, short unsigned int port) {
+   _logger._log_file = _server_log.c_str();
 
    struct sockaddr_in servaddr;
 
@@ -38,6 +42,28 @@ void TCPServer::bindSvr(const char *ip_addr, short unsigned int port) {
 
    // Load the socket information to prep for binding
    _sockfd.bindFD(ip_addr, port);
+
+   // Load whitelist
+   FileFD whitelistFD("whitelist");
+   if(!whitelistFD.openFile(FileFD::readfd))
+      throw pwfile_error("could not open white list file for reading");
+   bool eof = false;
+   int result = 0;
+   std::string IP;
+   while(!eof){
+      if((result = whitelistFD.readStr(IP)) < 0){
+         throw(pwfile_error("failed reading from whitelist"));
+      } else if(result == 0){
+         eof = true;
+      } else {
+         std::cout << "IP: " << IP << "\n";
+         white_list_IPs.push_back(IP);
+      }
+
+   }
+
+   _logger.logMsg("Server Online\n");
+
  
 }
 
@@ -65,6 +91,7 @@ void TCPServer::listenSvr() {
       struct sockaddr_in cliaddr;
       socklen_t len = sizeof(cliaddr);
 
+
       if (_sockfd.hasData()) {
          TCPConn *new_conn = new TCPConn();
          if (!new_conn->accept(_sockfd)) {
@@ -73,14 +100,21 @@ void TCPServer::listenSvr() {
          }
          std::cout << "***Got a connection***\n";
 
-         _connlist.push_back(std::unique_ptr<TCPConn>(new_conn));
 
          // Get their IP Address string to use in logging
          std::string ipaddr_str;
          new_conn->getIPAddrStr(ipaddr_str);
 
+         //check if on whitelist
+         if(std::find(white_list_IPs.begin(), white_list_IPs.end(), ipaddr_str) != white_list_IPs.end()) {
+            new_conn->sendText("Welcome to the CSCE 689 Server!\n");
+            _connlist.push_back(std::unique_ptr<TCPConn>(new_conn));
+            _logger.logMsg(((std::string("Whitelisted Connection: ").append(ipaddr_str)).append(std::string("\n")).c_str()));
+         } else {
+            _logger.logMsg(((std::string("Blocked Non-Whitelisted Connection: ").append(ipaddr_str)).append(std::string("\n")).c_str()));
+            new_conn->disconnect();
+         }
 
-         new_conn->sendText("Welcome to the CSCE 689 Server!\n");
 
          // Change this later
          new_conn->startAuthentication();
